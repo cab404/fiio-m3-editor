@@ -2,12 +2,10 @@ package com.cab404.fiio.m3.editor;
 
 import com.cab404.fiio.m3.db.M3Library;
 import com.cab404.fiio.m3.db.M3Playlist;
-import com.cab404.fiio.m3.db.Utils;
 import com.cab404.fiio.m3.db.data.PlaylistEntry;
 import com.cab404.fiio.m3.db.data.Song;
 
 import javax.swing.*;
-import java.awt.dnd.*;
 import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
@@ -93,8 +91,6 @@ public class MainScreen implements ActionListener, PlaylistChooserDialog.OnFileS
         }
 
         frame.setJMenuBar(menuBar);
-
-        form = new MainScreenForm();
         frame.setContentPane(form.root);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.pack();
