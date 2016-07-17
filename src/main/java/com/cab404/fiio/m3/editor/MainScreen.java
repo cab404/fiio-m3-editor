@@ -10,115 +10,46 @@ import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
  * @author cab404
  */
 public class MainScreen implements ActionListener, PlaylistChooserDialog.OnFileSelectedListener {
-    private JFrame frame;
-    private MainScreenForm form;
+    private MainScreenFrame frame;
     private DBTableModel dbModel = new DBTableModel();
     private DBTableModel playlistModel = new DBTableModel();
     private File currentFile;
 
     public MainScreen() {
 
-        form = new MainScreenForm();
-        frame = new JFrame("M3 Playlist Editor");
+        frame = new MainScreenFrame(this);
+        frame.dbTable.setModel(dbModel);
+        frame.playlistTable.setModel(playlistModel);
+        frame.playlistTable.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent keyEvent) {}
 
-        JMenuBar menuBar = new JMenuBar();
-        {
-            JMenu file = new JMenu("File");
-            {
-                file.setMnemonic('F');
-
-                JMenuItem load = new JMenuItem("Load playlist...");
-                {
-                    load.setAccelerator(KeyStroke.getKeyStroke('O', InputEvent.CTRL_DOWN_MASK));
-                    load.setActionCommand("load");
-                    load.addActionListener(this);
-                    file.add(load);
-                }
-
-                JMenuItem save = new JMenuItem("Save playlist");
-                {
-                    save.setAccelerator(KeyStroke.getKeyStroke('S', InputEvent.CTRL_DOWN_MASK));
-                    save.setActionCommand("save");
-                    save.addActionListener(this);
-                    file.add(save);
-                }
-
-                menuBar.add(file);
-            }
-            JMenu edit = new JMenu("Edit");
-            {
-                edit.setMnemonic('E');
-
-                JMenuItem add = new JMenuItem("Add to playlist");
-                {
-                    add.setActionCommand("add-songs");
-                    add.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_INSERT, 0));
-                    add.addActionListener(this);
-                    edit.add(add);
-                }
-
-                JMenuItem remove = new JMenuItem("Remove from playlist");
-                {
-                    remove.setActionCommand("remove-songs");
-                    remove.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
-                    remove.addActionListener(this);
-                    edit.add(remove);
-                }
-
-                JMenuItem moveUp = new JMenuItem("Move up in playlist");
-                {
-                    moveUp.setActionCommand("move-up");
-                    moveUp.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_UP, InputEvent.ALT_DOWN_MASK));
-                    moveUp.addActionListener(this);
-                    edit.add(moveUp);
-                }
-
-                JMenuItem moveDown = new JMenuItem("Move down in playlist");
-                {
-                    moveDown.setActionCommand("move-down");
-                    moveDown.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, InputEvent.ALT_DOWN_MASK));
-                    moveDown.addActionListener(this);
-                    edit.add(moveDown);
+            @Override
+            public void keyPressed(KeyEvent keyEvent) {
+                if (keyEvent.isAltDown()) {
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_DOWN)
+                        movePlaylistRows(1);
+                    if (keyEvent.getKeyCode() == KeyEvent.VK_UP)
+                        movePlaylistRows(-1);
                 }
             }
-            menuBar.add(edit);
-        }
 
-        frame.setJMenuBar(menuBar);
-        frame.setContentPane(form.root);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.pack();
+            @Override
+            public void keyReleased(KeyEvent keyEvent) {}
+        });
 
-        form.dbTable.setModel(dbModel);
-        {
-            JPopupMenu menu = new JPopupMenu();
-            JMenuItem add = new JMenuItem("Add to playlist");
-            add.setActionCommand("add-songs");
-            menu.add(add);
-            add.addActionListener(this);
-            form.dbTable.setComponentPopupMenu(menu);
-        }
-
-        form.playlistTable.setModel(playlistModel);
-        {
-            JPopupMenu menu = new JPopupMenu();
-            JMenuItem remove = new JMenuItem("Remove from playlist");
-            remove.setActionCommand("remove-songs");
-            remove.addActionListener(this);
-            menu.add(remove);
-            form.playlistTable.setComponentPopupMenu(menu);
-        }
     }
 
     @Override
     public void actionPerformed(ActionEvent actionEvent) {
-        int[] rows = form.playlistTable.getSelectedRows();
+        long time = System.currentTimeMillis();
         switch (actionEvent.getActionCommand()) {
             case "save":
                 if (currentFile != null)
@@ -132,37 +63,35 @@ public class MainScreen implements ActionListener, PlaylistChooserDialog.OnFileS
                 dialog.show();
                 break;
             case "add-songs":
-                for (int index : form.dbTable.getSelectedRows()) {
+                for (int index : frame.dbTable.getSelectedRows()) {
                     playlistModel.add(dbModel.getSongs().get(index));
                 }
                 setStatus("Songs(s) added. " + playlistModel.getSongs().size() + "/100 songs in playlist");
                 break;
             case "remove-songs":
-                playlistModel.remove(rows);
+                playlistModel.remove(frame.playlistTable.getSelectedRows());
                 setStatus("Songs(s) deleted. " + playlistModel.getSongs().size() + "/100 songs in playlist");
                 break;
-            case "move-up": {
-                for (int row : rows)
-                    if (row == 0)
-                        return;
-
-                Set<Integer> newSelected = playlistModel.moveRows(-1, rows);
-                form.playlistTable.clearSelection();
-                for (int row : newSelected)
-                    form.playlistTable.addRowSelectionInterval(row, row);
-                break;
-            }
-            case "move-down": {
-                for (int row : rows)
-                    if (row == playlistModel.getSongs().size() - 1)
-                        return;
-                Set<Integer> newSelected = playlistModel.moveRows(1, rows);
-                form.playlistTable.clearSelection();
-                for (int row : newSelected)
-                    form.playlistTable.addRowSelectionInterval(row, row);
-                break;
-            }
         }
+
+        System.out.println("took " + (System.currentTimeMillis() - time) + " ms");
+    }
+
+    private void movePlaylistRows(int by) {
+        int[] rows = frame.playlistTable.getSelectedRows();
+        int size = playlistModel.getSongs().size();
+        for (int row : rows) {
+            if (row == (size - by) % size)
+                return;
+        }
+        for (int row : rows)
+            if (row == 0)
+                return;
+
+        Set<Integer> newSelected = playlistModel.moveRows(by, rows);
+        frame.playlistTable.clearSelection();
+        for (int row : newSelected)
+            frame.playlistTable.addRowSelectionInterval(row, row);
     }
 
     private void save() {
@@ -179,26 +108,26 @@ public class MainScreen implements ActionListener, PlaylistChooserDialog.OnFileS
             M3Playlist.rewritePlaylist(currentFile, songs);
         } catch (IOException e) {
             e.printStackTrace();
-            form.status.setText("Playlist save failed: " + e.getMessage());
+            frame.status.setText("Playlist save failed: " + e.getMessage());
             return;
         }
-        form.status.setText("Playlist saved.");
+        frame.status.setText("Playlist saved.");
     }
 
     public void show() {
         frame.setVisible(true);
     }
 
-    public void setDB(List<Song> songs) {
+    private void setDB(List<Song> songs) {
         dbModel.setSongs(songs);
     }
 
-    public void setPlaylist(List<Song> playlist) {
+    private void setPlaylist(List<Song> playlist) {
         playlistModel.setSongs(playlist);
     }
 
-    public void setStatus(String status) {
-        form.status.setText(status);
+    private void setStatus(String status) {
+        frame.status.setText(status);
     }
 
     @Override
@@ -212,7 +141,7 @@ public class MainScreen implements ActionListener, PlaylistChooserDialog.OnFileS
             db = M3Library.readDB(dbFile);
         } catch (IOException e) {
             e.printStackTrace();
-            form.status.setText("DB load failed: " + e.getMessage());
+            frame.status.setText("DB load failed: " + e.getMessage());
             return;
         }
 
@@ -226,7 +155,7 @@ public class MainScreen implements ActionListener, PlaylistChooserDialog.OnFileS
             entries = M3Playlist.readPL(file);
         } catch (IOException e) {
             e.printStackTrace();
-            form.status.setText("Playlist load failed: " + e.getMessage());
+            frame.status.setText("Playlist load failed: " + e.getMessage());
             return;
         }
 
