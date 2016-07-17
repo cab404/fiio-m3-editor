@@ -79,13 +79,9 @@ public class MainScreen implements ActionListener, PlaylistChooserDialog.OnFileS
 
     private void movePlaylistRows(int by) {
         int[] rows = frame.playlistTable.getSelectedRows();
-        int size = playlistModel.getSongs().size();
-        for (int row : rows) {
-            if (row == (size - by) % size)
-                return;
-        }
+        int size = playlistModel.getSongs().size() - 1;
         for (int row : rows)
-            if (row == 0)
+            if (row == (by > 0 ? size : 0))
                 return;
 
         Set<Integer> newSelected = playlistModel.moveRows(by, rows);
