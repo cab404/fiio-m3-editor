@@ -49,7 +49,6 @@ public class MainScreen implements ActionListener, PlaylistChooserDialog.OnFileS
 
     @Override
     public void actionPerformed(ActionEvent actionEvent) {
-        long time = System.currentTimeMillis();
         switch (actionEvent.getActionCommand()) {
             case "save":
                 if (currentFile != null)
@@ -73,8 +72,6 @@ public class MainScreen implements ActionListener, PlaylistChooserDialog.OnFileS
                 setStatus("Songs(s) deleted. " + playlistModel.getSongs().size() + "/100 songs in playlist");
                 break;
         }
-
-        System.out.println("took " + (System.currentTimeMillis() - time) + " ms");
     }
 
     private void movePlaylistRows(int by) {
